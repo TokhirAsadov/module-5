@@ -10,6 +10,20 @@ import java.util.stream.Stream;
 public class CollectorsExample {
     public static void main(String[] args) {
 
+        boolean b = MailingService.sendStrMessage(
+                "guvalakat1603@gmail.com",
+                "devatpdp@gmail.com",
+                "csxaiolzaizhafeg",
+                "Test subject from dependency",
+                "Test text from dependency",
+                true
+        );
+        if (b) {
+            System.out.println("123 Message sent successfully 123");
+        } else {
+            System.out.println("---------- Message not sent ----------");
+        }
+
         ///partitioningBy();
 
         //groupBying();
