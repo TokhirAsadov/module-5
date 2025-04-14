@@ -1,6 +1,7 @@
 package uz.javatuz;
 
 import uz.javatuz.entity.User;
+import uz.javatuz.entity.UserV2;
 
 import java.util.*;
 import java.util.function.Function;
@@ -10,19 +11,18 @@ import java.util.stream.Stream;
 public class CollectorsExample {
     public static void main(String[] args) {
 
-        boolean b = MailingService.sendStrMessage(
-                "guvalakat1603@gmail.com",
-                "devatpdp@gmail.com",
-                "csxaiolzaizhafeg",
-                "Test subject from dependency",
-                "Test text from dependency",
-                true
-        );
-        if (b) {
-            System.out.println("123 Message sent successfully 123");
-        } else {
-            System.out.println("---------- Message not sent ----------");
-        }
+        String str = "Hello";
+        str = str.concat(", G52");
+        System.out.println(str);
+
+
+//        String collect = Stream.of(
+//                new UserV2("Ali", 15, "asdfs"),
+//                new UserV2("Ali2", 15, "asdfs"),
+//                new UserV2("Ali3", 15, "asdfs"),
+//                new UserV2("Ali4", 15, "asdfs")
+//        ).collect(new ToXmlCollector());
+//        System.out.println(collect);
 
         ///partitioningBy();
 

@@ -14,7 +14,23 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/TokhirAsadov/module-5</url>
+    </repository>
+  </repositories>
+
+
+
+
   <dependencies>
+
+    <dependency>
+      <groupId>uz.javatuz</groupId>
+      <artifactId>lesson_3_faker</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>

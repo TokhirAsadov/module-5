@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>uz.javatuz</groupId>
-  <artifactId>lesson_3_faker</artifactId>
+  <artifactId>own_mailing_dependency</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>lesson_3_faker</name>
+  <name>own_mailing_dependency</name>
   <url>http://maven.apache.org</url>
 
   <properties>
@@ -15,24 +15,12 @@
   </properties>
 
   <dependencies>
+
+
     <dependency>
       <groupId>com.sun.mail</groupId>
       <artifactId>javax.mail</artifactId>
       <version>1.6.2</version>
     </dependency>
-    <dependency>
-      <groupId>com.github.javafaker</groupId>
-      <artifactId>javafaker</artifactId>
-      <version>1.0.2</version> <!-- So'nggi versiyani tekshiring -->
-    </dependency>
   </dependencies>
-
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>Jar file -> GitHub Packages</name>
-      <url>https://maven.pkg.github.com/TokhirAsadov/module-5</url>
-    </repository>
-  </distributionManagement>
-
 </project>
