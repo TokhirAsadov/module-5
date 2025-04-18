@@ -1,27 +1,16 @@
 package com.pdp;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.annotations.Since;
-
-import java.util.Date;
-
 public class Post {
 
-    @Expose
+
     private Long id;
 
-    @Since(1.0)
-    @Expose(serialize = false,deserialize = false)
+
     private static String title;
 
-//    @SerializedName("user_id")
-    @Expose
-    @Since(1.2)
+
     private transient Long userId;
 
-    @Expose
-    @Since(2.0)
     private volatile String body;
 
 
