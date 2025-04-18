@@ -53,6 +53,12 @@ public class Post {
         this.userId = userId;
     }
 
+    public Post(String body, String title, Long userId) {
+        this.body = body;
+        this.title = title;
+        this.userId = userId;
+    }
+
     @Override
     public String toString() {
         return "Post{" +
