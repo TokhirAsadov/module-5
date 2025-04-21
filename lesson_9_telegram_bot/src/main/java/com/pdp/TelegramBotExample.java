@@ -21,14 +21,47 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TelegramBotExample {
 
     private static final ResourceBundle resourceBundle = ResourceBundle.getBundle("settings");
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    public static final ThreadLocal<TelegramBotUpdateHandler> threadLocal = new ThreadLocal<>();
+
 
     public static void main(String[] args) throws IOException {
         TelegramBot bot = new TelegramBot(resourceBundle.getString("bot.token"));
 
+
+        bot.setUpdatesListener((updates) -> {
+            updates.forEach(update -> {
+                CompletableFuture.runAsync(()->{
+                    threadLocal.get().handler(update);
+                },executorService);
+            });
+
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        }, Throwable::printStackTrace);
+
+        //getUpdatesV2(bot);
+
+        //getUpdatesV1(bot);
+
+        //sendMessageWithReplayKeyboard(bot);
+
+//        sendMessageWithInlineKeyboard(bot);
+
+        //sendDocument(bot);
+
+        //sendPhoto(bot);
+        //sendAudio(bot);
+//        sendMessage(bot);
+    }
+
+    private static void getUpdatesV2(TelegramBot bot) {
         bot.setUpdatesListener((updates) -> {
 
             updates.forEach(update -> {
@@ -79,18 +112,6 @@ public class TelegramBotExample {
 
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         }, Throwable::printStackTrace);
-
-        //getUpdatesV1(bot);
-
-        //sendMessageWithReplayKeyboard(bot);
-
-//        sendMessageWithInlineKeyboard(bot);
-
-        //sendDocument(bot);
-
-        //sendPhoto(bot);
-        //sendAudio(bot);
-//        sendMessage(bot);
     }
 
     private static void getUpdatesV1(TelegramBot bot) {
