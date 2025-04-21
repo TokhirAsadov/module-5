@@ -1,36 +1,142 @@
 package com.pdp;
 
+import com.pengrad.telegrambot.ExceptionHandler;
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.TelegramException;
+import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.CallbackQuery;
+import com.pengrad.telegrambot.model.Chat;
+import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.model.request.KeyboardButton;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendAudio;
-import com.pengrad.telegrambot.request.SendDocument;
-import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.request.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.ResourceBundle;
 
 public class TelegramBotExample {
 
+    private static final ResourceBundle resourceBundle = ResourceBundle.getBundle("settings");
 
     public static void main(String[] args) throws IOException {
-        TelegramBot bot = new TelegramBot("8031796169:AAF5l7wsaTL65jL7CA1UJYCjg66fTN1md8s");
+        TelegramBot bot = new TelegramBot(resourceBundle.getString("bot.token"));
+
+        bot.setUpdatesListener((updates) -> {
+
+            updates.forEach(update -> {
+
+                if (update.message() != null) {
+                    String text = update.message().text();
+                    Long chatID = update.message().chat().id();
+
+                    if (text.equals("/start")){
+                        User from = update.message().from();
+                        SendMessage sendMessage = new SendMessage(
+                                chatID,
+                                """
+                                        Salom %s %s!
+                                        Sizga qanday yordam bera olishim mumkin?
+                                        \n
+                                        Bot menusi:
+                                        1. /start - Botni ishga tushirish
+                                        2. /help - Yordam
+                                        """.formatted(from.firstName(), from.lastName())
+                        );
+                        bot.execute(sendMessage);
+                    } else if (text.equals("/help")) {
+                        SendMessage sendMessage = new SendMessage(
+                                chatID,
+                                """
+                                        Aslida hech qanday yordam mavjud emas ;)
+                                        """);
+                        bot.execute(sendMessage);
+
+                    } else {
+                        DeleteMessage deleteMessage = new DeleteMessage(
+                                chatID,
+                                update.message().messageId()
+                        );
+
+                        bot.execute(deleteMessage);
+                    }
+
+                } else if (update.callbackQuery() != null) {
+                    CallbackQuery callbackQuery = update.callbackQuery();
+                    String data = callbackQuery.data();
+                    Long id = callbackQuery.from().id();
+
+                    System.out.println("Callback: " + data);
+                }
+            });
+
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        }, Throwable::printStackTrace);
+
+        //getUpdatesV1(bot);
 
         //sendMessageWithReplayKeyboard(bot);
 
-        //sendMessageWithInlineKeyboard(bot);
+//        sendMessageWithInlineKeyboard(bot);
 
         //sendDocument(bot);
 
         //sendPhoto(bot);
         //sendAudio(bot);
-        //sendMessage(bot);
+//        sendMessage(bot);
+    }
+
+    private static void getUpdatesV1(TelegramBot bot) {
+        bot.setUpdatesListener(new UpdatesListener() {
+            @Override
+            public int process(List<Update> list) {
+
+                list.forEach(update -> {
+
+                    if (update.message() != null) {
+                        Chat chat = update.message().chat();
+                        Long chatID = chat.id();
+                        String text = update.message().text();
+                        System.out.println("Message: " + text);
+                        SendMessage sendMessage = new SendMessage(
+                                chatID,
+                                """
+                                        Your sent this message:\n
+                                        %s
+                                        """.formatted(text)
+
+                        );
+
+                        bot.execute(sendMessage);
+                    } else if (update.callbackQuery() != null) {
+                        CallbackQuery callbackQuery = update.callbackQuery();
+                        String data = callbackQuery.data();
+
+                        Long id = callbackQuery.from().id();
+
+                        SendMessage sendMessage = new SendMessage(
+                                id,
+                                """
+                                        Your sent this message:\n
+                                        %s
+                                        """.formatted(data)
+
+                        );
+                        bot.execute(sendMessage);
+                        System.out.println("Callback: " + data);
+                    }
+                });
+
+                return UpdatesListener.CONFIRMED_UPDATES_ALL;
+            }
+        });
     }
 
     private static void sendMessageWithReplayKeyboard(TelegramBot bot) {
@@ -93,7 +199,6 @@ public class TelegramBotExample {
                 Files.readAllBytes(Path.of("D:\\life rool.jpg"))
         );
         sendPhoto.caption("Buni hayot deydi.\nPhoto caption");
-
         bot.execute(sendPhoto);
         System.out.println("Photo sent successfully!");
     }
@@ -104,9 +209,7 @@ public class TelegramBotExample {
                 Files.readAllBytes(Path.of("C:\\Users\\guval\\Downloads\\Telegram Desktop\\Abrobey_Bolalik_zo’r_bo’lardi_yiqilsam_yugurib_otam_kelardi.mp3"))
         );
         sendAudio.caption("Bolik haqida ko`cha qushig`i.\nAudio file caption");
-
         bot.execute(sendAudio);
-
         System.out.println("Audio sent successfully!");
     }
 
@@ -115,9 +218,7 @@ public class TelegramBotExample {
                 7567495333L,
                 "Hello, this is a test message from my Java Telegram bot!"
         );
-
         bot.execute(sendMessage);
-
         System.out.println("Message sent successfully!");
     }
 }
