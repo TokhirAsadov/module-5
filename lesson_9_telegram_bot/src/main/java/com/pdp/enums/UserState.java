@@ -1,6 +1,10 @@
 package com.pdp.enums;
 
 public enum UserState {
+    LANGUAGE,
+    SHARING_PHOTO,
+    SHARING_DOCUMENT,
+    SHARING_AUDIO,
     ENTERING_NAME,
     ENTERING_AGE,
     ENTERING_EMAIL,
