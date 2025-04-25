@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -33,7 +32,7 @@ public class TelegramBotExample {
 
 
     public static void main(String[] args) throws IOException {
-        TelegramBot bot = new TelegramBot(resourceBundle.getString("bot.token"));
+        TelegramBot bot = new TelegramBot("8031796169:AAF5l7wsaTL65jL7CA1UJYCjg66fTN1md8s");
 
 
         bot.setUpdatesListener((updates) -> {
