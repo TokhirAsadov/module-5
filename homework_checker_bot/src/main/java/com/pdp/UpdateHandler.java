@@ -1,6 +1,7 @@
 package com.pdp;
 
 import com.pdp.database.DB;
+import com.pdp.entity.History;
 import com.pdp.entity.Product;
 import com.pdp.entity.User;
 import com.pdp.entity.UserState;
@@ -10,6 +11,7 @@ import com.pengrad.telegrambot.model.PhotoSize;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.*;
 import com.pengrad.telegrambot.request.*;
+import com.pengrad.telegrambot.response.BaseResponse;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +64,9 @@ public class UpdateHandler {
                 case SHOW_PRODUCT -> {
                     showProductSecondWay(bot, update);
                 }
+                case USER_MENU -> {
+                    userMenu(bot, update);
+                }
 
             }
 
@@ -77,6 +82,385 @@ public class UpdateHandler {
                 }
                 case SHOW_PRODUCT -> {
                     showProduct(bot, callbackQuery);
+                }
+                case CHOOSE_PRODUCT_FOR_USER -> {
+                    chooseProductForUser(bot, callbackQuery);
+                }
+                case SHOW_PRODUCT_FOR_USER -> {
+                    showProductForUser(bot, callbackQuery);
+                }
+                case CHOOSE_HISTORY_FOR_USER -> {
+                    chooseHistoryForUser(bot, callbackQuery);
+                }
+            }
+        }
+    }
+
+    private static void chooseHistoryForUser(TelegramBot bot, CallbackQuery callbackQuery) {
+        String data = callbackQuery.data();
+        Long chatID = callbackQuery.from().id();
+        System.out.println("data: "+data);
+        if (data.startsWith("prev_")) {
+            String firstHistoryId = data.substring(data.indexOf("_") + 1);
+            StringBuilder stringBuilder = new StringBuilder();
+            AtomicInteger count= new AtomicInteger();
+            List<UUID> historiesIds = new ArrayList<>();
+
+            AtomicInteger n = new AtomicInteger(0);
+            for (int coreCount = 0; coreCount < DB.histories.size(); coreCount++) {
+                if (DB.histories.get(coreCount).getId().toString().equals(firstHistoryId)) {
+                    n.set(coreCount);
+                    break;
+                }
+            }
+            System.out.println("---- "+n.get());
+            DB.histories.stream()
+                    .skip(n.get()-2)
+                    .limit(2)
+                    .forEach(history -> {
+                        historiesIds.add(history.getId());
+                        stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(history.getName()));
+                    });
+
+            EditMessageText sendMessage = new EditMessageText(chatID,callbackQuery.message().messageId(), "You can see YOUR HISTORY:\n_____________________________________\n%s".formatted(stringBuilder));
+            sendMessage.replyMarkup(buttons(historiesIds));
+            bot.execute(sendMessage);
+        }
+        else if (data.startsWith("next_")) {
+            String lastHistoryId = data.substring(data.indexOf("_") + 1);
+            StringBuilder stringBuilder = new StringBuilder();
+            AtomicInteger count= new AtomicInteger();
+            List<UUID> historiesIds = new ArrayList<>();
+
+            AtomicInteger n = new AtomicInteger(0);
+            for (int coreCount = 0; coreCount < DB.histories.size(); coreCount++) {
+                if (DB.histories.get(coreCount).getId().toString().equals(lastHistoryId)) {
+                    n.set(coreCount);
+                    break;
+                }
+            }
+            System.out.println("---- "+n.get());
+            DB.histories.stream()
+                    .skip(n.get()+1)
+                    .limit(2)
+                    .forEach(history -> {
+                        historiesIds.add(history.getId());
+                        stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(history.getName()));
+                    });
+
+            EditMessageText sendMessage = new EditMessageText(chatID,callbackQuery.message().messageId(), "You can see YOUR HISTORY:\n_____________________________________\n%s".formatted(stringBuilder));
+
+            if (historiesIds.size() == 0) {
+                AnswerCallbackQuery noMoreProducts = new AnswerCallbackQuery(callbackQuery.id())
+                        .text("No more history")
+                        .showAlert(true);
+                bot.execute(noMoreProducts);
+            } else {
+                sendMessage.replyMarkup(buttons(historiesIds));
+                bot.execute(sendMessage);
+            }
+        }
+        else if (data.equals("reject")) {
+            System.out.println("reject ------------------");
+            DB.users.stream().filter(user -> user.getLogin().equals("admin") && user.getChatId().equals(chatID))
+                    .findFirst()
+                    .ifPresentOrElse(user -> {
+                        userStates.put(chatID, UserState.ADMIN_MENU);
+
+                    },()->{
+                        userStates.put(chatID, UserState.USER_MENU);
+                    });
+            bot.execute(new DeleteMessage(chatID, callbackQuery.message().messageId()));
+        }
+        else {
+            String historyId = data.substring(data.indexOf("_") + 1);
+            DB.histories.stream().filter(product -> product.getId().equals(UUID.fromString(historyId)))
+                    .findFirst()
+                    .ifPresentOrElse(history -> {
+
+                        userStates.put(chatID, UserState.USER_MENU);
+
+                        SendPhoto sendPhoto = new SendPhoto(chatID, history.getFileId())
+                                .caption("""
+                                            Product name: %s
+                                            Product price: %s
+                                            Product quantity: %s
+                                            """.formatted(history.getName(), history.getPrice(), history.getQuantity()))
+                                .replyMarkup(
+                                        new ReplyKeyboardMarkup("Show Products","History").resizeKeyboard(true)
+                                );
+
+                        bot.execute(sendPhoto);
+                    }, () -> {
+                        bot.execute(new SendMessage(chatID, "Product not found!"));
+                    });
+        }
+    }
+
+    private static void showProductForUser(TelegramBot bot, CallbackQuery callbackQuery) {
+        String data = callbackQuery.data();
+        Long chatID = callbackQuery.from().id();
+        System.out.println("data: "+data);
+        if (data.startsWith("d_")) {
+            String historyId = data.substring(data.indexOf("_") + 1);
+            DB.histories.stream().filter(history -> history.getId().toString().equals(historyId))
+                    .findFirst()
+                    .ifPresentOrElse(history -> {
+                        if (history.getQuantity() > 1) {
+                            history.setQuantity(history.getQuantity() - 1);
+                            InlineKeyboardMarkup replyMarkup = new InlineKeyboardMarkup(
+                                    new InlineKeyboardButton("➖")
+                                            .callbackData("d_" + history.getId()),
+                                    new InlineKeyboardButton(history.getQuantity().toString())
+                                            .callbackData(history.getQuantity().toString()),
+                                    new InlineKeyboardButton("➕")
+                                            .callbackData("i_" + history.getId())
+                            );
+                            replyMarkup.addRow(
+                                    new InlineKeyboardButton("Xarid qilish")
+                                            .callbackData("add_" + history.getId())
+                            );
+                            EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup(chatID, callbackQuery.message().messageId())
+                                    .replyMarkup(replyMarkup);
+                            bot.execute(editMessageReplyMarkup);
+                        }
+                        else {
+                            bot.execute(new AnswerCallbackQuery(callbackQuery.id())
+                                    .text("Product quantity is 1")
+                                    .showAlert(true));
+                        }
+
+                    }, () -> {
+                        bot.execute(new SendMessage(chatID, "Product not found!"));
+                    });
+        }
+        else if (data.startsWith("i_")) {
+            String historyId = data.substring(data.indexOf("_") + 1);
+            DB.histories.stream().filter(history -> history.getId().toString().equals(historyId))
+                    .findFirst()
+                    .ifPresentOrElse(history -> {
+                        history.setQuantity(history.getQuantity() + 1);
+                        InlineKeyboardMarkup replyMarkup = new InlineKeyboardMarkup(
+                                new InlineKeyboardButton("➖")
+                                        .callbackData("d_" + history.getId()),
+                                new InlineKeyboardButton(history.getQuantity().toString())
+                                        .callbackData(history.getQuantity().toString()),
+                                new InlineKeyboardButton("➕")
+                                        .callbackData("i_" + history.getId())
+                        );
+                        replyMarkup.addRow(
+                                new InlineKeyboardButton("Xarid qilish")
+                                        .callbackData("add_" + history.getId())
+                        );
+                        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup(chatID, callbackQuery.message().messageId())
+                                .replyMarkup(replyMarkup);
+                        bot.execute(editMessageReplyMarkup);
+                    }, () -> {
+                        bot.execute(new SendMessage(chatID, "Product not found!"));
+                    });
+
+        } else if (data.startsWith("add_")) {
+            String historyId = data.substring(data.indexOf("_") + 1);
+            DB.histories.stream().filter(history -> history.getId().toString().equals(historyId))
+                    .findFirst()
+                    .ifPresentOrElse(history -> {
+
+                        userStates.put(chatID, UserState.USER_MENU);
+                        history.setIsSold(true);
+                        bot.execute(new DeleteMessage(chatID, callbackQuery.message().messageId()));
+                        SendMessage sendMessage = new SendMessage(chatID, "Xarid qilindi!");
+                        sendMessage.replyMarkup(new ReplyKeyboardMarkup("Show Products", "History").resizeKeyboard(true));
+                        bot.execute(sendMessage);
+
+                    }, () -> {
+                        bot.execute(new SendMessage(chatID, "Product not found!"));
+                    });
+        }
+    }
+
+    private static void chooseProductForUser(TelegramBot bot, CallbackQuery callbackQuery) {
+        String data = callbackQuery.data();
+        Long chatID = callbackQuery.from().id();
+        System.out.println("data: "+data);
+        if (data.startsWith("prev_")) {
+            String firstProductId = data.substring(data.indexOf("_") + 1);
+            StringBuilder stringBuilder = new StringBuilder();
+            AtomicInteger count= new AtomicInteger();
+            List<UUID> productIds = new ArrayList<>();
+
+            AtomicInteger n = new AtomicInteger(0);
+            for (int coreCount = 0; coreCount < DB.products.size(); coreCount++) {
+                if (DB.products.get(coreCount).getId().toString().equals(firstProductId)) {
+                    n.set(coreCount);
+                    break;
+                }
+            }
+            System.out.println("---- "+n.get());
+            DB.products.stream()
+                    .skip(n.get()-2)
+                    .limit(2)
+                    .forEach(product -> {
+                        productIds.add(product.getId());
+                        stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(product.getName()));
+                    });
+
+            EditMessageText sendMessage = new EditMessageText(chatID,callbackQuery.message().messageId(), "You can see products:\n_____________________________________\n%s".formatted(stringBuilder));
+            System.out.println(productIds);
+            sendMessage.replyMarkup(buttons(productIds));
+            bot.execute(sendMessage);
+        }
+        else if (data.startsWith("next_")) {
+            String lastProductId = data.substring(data.indexOf("_") + 1);
+            StringBuilder stringBuilder = new StringBuilder();
+            AtomicInteger count= new AtomicInteger();
+            List<UUID> productIds = new ArrayList<>();
+
+            AtomicInteger n = new AtomicInteger(0);
+            for (int coreCount = 0; coreCount < DB.products.size(); coreCount++) {
+                if (DB.products.get(coreCount).getId().toString().equals(lastProductId)) {
+                    n.set(coreCount);
+                    break;
+                }
+            }
+            System.out.println("---- "+n.get());
+            DB.products.stream()
+                    .skip(n.get()+1)
+                    .limit(2)
+                    .forEach(product -> {
+                        productIds.add(product.getId());
+                        stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(product.getName()));
+                    });
+
+            EditMessageText sendMessage = new EditMessageText(chatID,callbackQuery.message().messageId(), "You can see products:\n_____________________________________\n%s".formatted(stringBuilder));
+            System.out.println(productIds);
+
+            if (productIds.size() == 0) {
+                AnswerCallbackQuery noMoreProducts = new AnswerCallbackQuery(callbackQuery.id())
+                        .text("No more products")
+                        .showAlert(true);
+                bot.execute(noMoreProducts);
+            } else {
+                sendMessage.replyMarkup(buttons(productIds));
+                bot.execute(sendMessage);
+            }
+        }
+        else if (data.equals("reject")) {
+            System.out.println("reject ------------------");
+            DB.users.stream().filter(user -> user.getLogin().equals("admin") && user.getChatId().equals(chatID))
+                    .findFirst()
+                    .ifPresentOrElse(user -> {
+                        userStates.put(chatID, UserState.ADMIN_MENU);
+
+                    },()->{
+                        userStates.put(chatID, UserState.USER_MENU);
+                    });
+            DB.users.stream().filter(user -> !user.getLogin().equals("admin") && user.getChatId().equals(chatID))
+                    .findFirst()
+                    .ifPresent(user -> {
+                        userStates.put(chatID, UserState.USER_MENU);
+                    });
+            bot.execute(new DeleteMessage(chatID, callbackQuery.message().messageId()));
+        }
+        else {
+            String productId = data.substring(data.indexOf("_") + 1);
+            DB.products.stream().filter(product -> product.getId().equals(UUID.fromString(productId)))
+                    .findFirst()
+                    .ifPresentOrElse(product -> {
+                        History history = History.builder()
+                                .id(UUID.randomUUID())
+                                .userId(chatID)
+                                .productId(product.getId())
+                                .fileId(product.getFileId())
+                                .name(product.getName())
+                                .price(product.getPrice())
+                                .quantity(1)
+                                .isSold(false)
+                                .build();
+                        DB.histories.add(history);
+
+                        userStates.put(chatID, UserState.SHOW_PRODUCT_FOR_USER);
+                        InlineKeyboardMarkup replyMarkup = new InlineKeyboardMarkup();
+                        InlineKeyboardButton decrement = new InlineKeyboardButton("➖")
+                                .callbackData("d_"+history.getId());
+                        InlineKeyboardButton value = new InlineKeyboardButton("1")
+                                .callbackData("1");
+                        InlineKeyboardButton increment = new InlineKeyboardButton("➕")
+                                .callbackData("i_"+history.getId());
+                        replyMarkup.addRow(decrement,value,increment);
+                        InlineKeyboardButton addBasket = new InlineKeyboardButton("Xarid qilish")
+                                .callbackData("add_"+history.getId());
+                        replyMarkup.addRow(addBasket);
+                        SendPhoto sendPhoto = new SendPhoto(chatID, product.getFileId())
+                                .caption("""
+                                            Product name: %s
+                                            Product price: %s
+                                            Product quantity: %s
+                                            """.formatted(product.getName(), product.getPrice(), product.getQuantity()))
+                                .replyMarkup(replyMarkup);
+
+                        bot.execute(sendPhoto);
+                    }, () -> {
+                        bot.execute(new SendMessage(chatID, "Product not found!"));
+                    });
+        }
+    }
+
+    private static void userMenu(TelegramBot bot, Update update) {
+        Long chatID = update.message().from().id();
+        String text = update.message().text().trim();
+        switch (text){
+            case "Show Products" -> {
+                StringBuilder stringBuilder = new StringBuilder();
+                AtomicInteger count= new AtomicInteger();
+                List<UUID> productIds = new ArrayList<>();
+                DB.products.stream()
+                        .limit(2)
+                        .forEach(product -> {
+                            productIds.add(product.getId());
+                            stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(product.getName()));
+                        });
+
+
+                if (productIds.size()==0) {
+                    userStates.put(chatID, UserState.USER_MENU);
+                    SendMessage sendMessage = new SendMessage(chatID, "No products found!");
+                    ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup("Show Products","History");
+                    replyMarkup.resizeKeyboard(true);
+                    sendMessage.replyMarkup(replyMarkup);
+                    bot.execute(sendMessage);
+                }  else {
+                    userStates.put(chatID, UserState.CHOOSE_PRODUCT_FOR_USER);
+                    SendMessage sendMessage = new SendMessage(chatID, "You can see products:\n_____________________________________\n%s".formatted(stringBuilder));
+                    System.out.println(productIds);
+                    sendMessage.replyMarkup(buttons(productIds));
+                    bot.execute(sendMessage);
+                }
+            }
+            case "History" -> {
+                userStates.put(chatID, UserState.SHOW_HISTORY);
+                StringBuilder stringBuilder = new StringBuilder();
+                AtomicInteger count= new AtomicInteger();
+                List<UUID> historiesIds = new ArrayList<>();
+                DB.histories.stream()
+                        .limit(2)
+                        .forEach(history -> {
+                            historiesIds.add(history.getId());
+                            stringBuilder.append((count.incrementAndGet())+".%s\n".formatted(history.getName()));
+                        });
+
+
+                if (historiesIds.size()==0) {
+                    userStates.put(chatID, UserState.USER_MENU);
+                    SendMessage sendMessage = new SendMessage(chatID, "No histories found!");
+                    ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup("Show Products","History");
+                    replyMarkup.resizeKeyboard(true);
+                    sendMessage.replyMarkup(replyMarkup);
+                    bot.execute(sendMessage);
+                }  else {
+                    userStates.put(chatID, UserState.CHOOSE_HISTORY_FOR_USER);
+                    SendMessage sendMessage = new SendMessage(chatID, "You can see YOUR HISTORIES:\n_____________________________________\n%s".formatted(stringBuilder));
+                    sendMessage.replyMarkup(buttons(historiesIds));
+                    bot.execute(sendMessage);
                 }
             }
         }
@@ -516,8 +900,22 @@ public class UpdateHandler {
                 bot.execute(sendMessage);
             } else {
                 userStates.put(chatID, UserState.USER_MENU);
-                //todo-----------------------------------------------------------------------
-                bot.execute(new SendMessage(chatID,"Welcome User! You can see product menu:"));
+                DB.users.stream().filter(user1->user.getChatId().equals(chatID))
+                        .findFirst()
+                        .ifPresentOrElse(user1 -> {
+                            System.out.println("User already exists");
+                            },
+                            () -> {
+                                DB.users.add(User.builder()
+                                        .chatId(chatID)
+                                        .build());
+                            }
+                        );
+                SendMessage sendMessage = new SendMessage(chatID, "Welcome User!");
+                ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup("Show Products","History");
+                replyMarkup.resizeKeyboard(true);
+                sendMessage.replyMarkup(replyMarkup);
+                bot.execute(sendMessage);
             }
         }
 
