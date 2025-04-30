@@ -36,7 +36,7 @@ public class App {
         if (DB.users.isEmpty()) {
             DB.users.add(
                     User.builder()
-                    .chatId(7567495333L)
+                    .chatId(Long.valueOf(resourceBundle.getString("bot.adminId")))
                     .login("admin")
 //                    .password("admin")
                     .build());
