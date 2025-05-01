@@ -14,7 +14,7 @@ public class App {
     private static final ResourceBundle resourceBundle = ResourceBundle.getBundle("settings");
     private static final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    private static final ThreadLocal<UpdateHandler> threadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<UpdateHandler> threadLocal = ThreadLocal.withInitial(UpdateHandler::new);
 
     public static void main( String[] args ) {
         admin();

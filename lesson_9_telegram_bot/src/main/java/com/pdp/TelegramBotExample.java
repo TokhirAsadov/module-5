@@ -28,7 +28,7 @@ public class TelegramBotExample {
 
     private static final ResourceBundle resourceBundle = ResourceBundle.getBundle("settings");
     private static final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-    public static final ThreadLocal<TelegramBotUpdateHandler> threadLocal = new ThreadLocal<>();
+    public static final ThreadLocal<TelegramBotUpdateHandler> threadLocal = ThreadLocal.withInitial(TelegramBotUpdateHandler::new);
 
 
     public static void main(String[] args) throws IOException {
